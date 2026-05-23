@@ -9,4 +9,4 @@ This version has breaking changes — APIs, conventions, and file structure may 
 Deployed on Vercel. Push to `main` to trigger auto-deploy.
 
 Environment variables needed:
-- `NEXT_PUBLIC_STRATZ_API_KEY` — STRATZ GraphQL API key
+- `STRATZ_API_KEY` — STRATZ GraphQL API key (used server-side by `/api/stratz` proxy)

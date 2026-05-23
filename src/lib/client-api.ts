@@ -1,16 +1,9 @@
 import type { SearchPlayerResult, PlayerData, MatchData, MatchPlayer } from "./types"
 
-const TOKEN = process.env.NEXT_PUBLIC_STRATZ_API_KEY ?? ""
-
 async function gql<T>(query: string, variables?: Record<string, unknown>): Promise<T> {
-  console.log("[gql] query:", query.substring(0, 50))
-  const res = await fetch("https://api.stratz.com/graphql", {
+  const res = await fetch("/api/stratz", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-      Authorization: `Bearer ${TOKEN}`,
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ query, variables }),
   })
   if (!res.ok) {
