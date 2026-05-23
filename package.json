@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "STATIC_EXPORT=true next build",
+    "build": "STATIC_EXPORT=true next build && cp out/index.html out/404.html && touch out/.nojekyll",
     "start": "next start",
     "lint": "eslint"
   },
