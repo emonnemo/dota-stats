@@ -1,20 +1,37 @@
 import type { SearchPlayerResult, PlayerData, MatchData, MatchPlayer } from "./types"
 
+const TOKEN = process.env.NEXT_PUBLIC_STRATZ_API_KEY ?? ""
+
 async function gql<T>(query: string, variables?: Record<string, unknown>): Promise<T> {
-  const res = await fetch("/api/stratz", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ query, variables }),
-  })
-  if (!res.ok) {
-    const text = await res.text()
-    throw new Error(`STRATZ error ${res.status}: ${text.substring(0, 200)}`)
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 15000)
+
+  try {
+    const res = await fetch("https://api.stratz.com/graphql", {
+      signal: controller.signal,
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        Authorization: `Bearer ${TOKEN}`,
+      },
+      body: JSON.stringify({ query, variables }),
+    })
+    clearTimeout(timeout)
+    if (!res.ok) {
+      const text = await res.text()
+      throw new Error(`STRATZ error ${res.status}: ${text.substring(0, 200)}`)
+    }
+    const json = await res.json()
+    if (json.errors && !json.data) {
+      throw new Error(json.errors[0]?.message ?? "STRATZ GraphQL error")
+    }
+    return json.data as T
+  } catch (err) {
+    clearTimeout(timeout)
+    console.error("[gql] fetch error:", err)
+    throw err
   }
-  const json = await res.json()
-  if (json.errors && !json.data) {
-    throw new Error(json.errors[0]?.message ?? "STRATZ GraphQL error")
-  }
-  return json.data as T
 }
 
 export async function searchPlayers(query: string): Promise<SearchPlayerResult[]> {
