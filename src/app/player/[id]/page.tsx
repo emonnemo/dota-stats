@@ -1,7 +1,8 @@
 "use client"
 
-import { use, useEffect, useState } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
+import { useParams } from "next/navigation"
 import { getPlayer, getRecentMatches } from "@/lib/client-api"
 import { getRankName, formatDuration, formatTime, kdaRatio, performanceScore, performanceLabel, performanceColor } from "@/lib/utils"
 import { GAME_MODES } from "@/lib/types"
@@ -10,9 +11,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import type { PlayerData, MatchData } from "@/lib/types"
 
-export default function PlayerPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params)
-  const steamAccountId = Number(id)
+export default function PlayerPage() {
+  const params = useParams()
+  const steamAccountId = Number(params.id)
 
   const [player, setPlayer] = useState<PlayerData | null>(null)
   const [matches, setMatches] = useState<MatchData[]>([])

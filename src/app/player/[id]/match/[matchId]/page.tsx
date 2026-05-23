@@ -1,7 +1,8 @@
 "use client"
 
-import { use, useEffect, useState } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
+import { useParams } from "next/navigation"
 import { getMatchDetail, getItemImageUrl } from "@/lib/client-api"
 import { formatDuration, formatTime, performanceScore } from "@/lib/utils"
 import { GAME_MODES } from "@/lib/types"
@@ -10,10 +11,10 @@ import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import type { MatchData } from "@/lib/types"
 
-export default function MatchPage({ params }: { params: Promise<{ id: string; matchId: string }> }) {
-  const { id, matchId } = use(params)
-  const accountId = Number(id)
-  const matchIdNum = Number(matchId)
+export default function MatchPage() {
+  const params = useParams()
+  const accountId = Number(params.id)
+  const matchIdNum = Number(params.matchId)
 
   const [match, setMatch] = useState<MatchData | null>(null)
   const [loading, setLoading] = useState(true)
