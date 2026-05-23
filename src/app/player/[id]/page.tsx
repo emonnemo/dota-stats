@@ -15,12 +15,15 @@ export default function PlayerPage() {
   const params = useParams()
   const steamAccountId = Number(params.id)
 
+  console.log("[PlayerPage] rendering, id:", params.id, "steamAccountId:", steamAccountId)
+
   const [player, setPlayer] = useState<PlayerData | null>(null)
   const [matches, setMatches] = useState<MatchData[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
 
   useEffect(() => {
+    console.log("[PlayerPage] useEffect fired, id:", steamAccountId)
     if (isNaN(steamAccountId)) {
       setError(true)
       return
