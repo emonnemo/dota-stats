@@ -1,6 +1,6 @@
 import type { SearchPlayerResult, PlayerData, MatchData, MatchPlayer } from "./types"
 
-const TOKEN = process.env.NEXT_PUBLIC_STRATZ_API_KEY ?? ""
+const TOKEN = (process.env.NEXT_PUBLIC_STRATZ_API_KEY ?? "").trim()
 
 async function gql<T>(query: string, variables?: Record<string, unknown>): Promise<T> {
   const controller = new AbortController()
