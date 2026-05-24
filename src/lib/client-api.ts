@@ -1,6 +1,6 @@
 import type { SearchPlayerResult, PlayerData, MatchData, MatchPlayer } from "./types"
 
-const TOKEN = (process.env.NEXT_PUBLIC_STRATZ_API_KEY ?? "").replace(/[^\x21-\x7E]/g, "")
+const TOKEN = (process.env.STRATZ_API_KEY ?? "").replace(/[^\x21-\x7E]/g, "")
 
 function gql<T>(query: string, variables?: Record<string, unknown>): Promise<T> {
   return new Promise((resolve, reject) => {
