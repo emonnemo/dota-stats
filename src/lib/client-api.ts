@@ -1,37 +1,40 @@
 import type { SearchPlayerResult, PlayerData, MatchData, MatchPlayer } from "./types"
 
-const TOKEN = (process.env.NEXT_PUBLIC_STRATZ_API_KEY ?? "").trim()
+const TOKEN = (process.env.NEXT_PUBLIC_STRATZ_API_KEY ?? "").replace(/[^\x21-\x7E]/g, "")
 
-async function gql<T>(query: string, variables?: Record<string, unknown>): Promise<T> {
-  const controller = new AbortController()
-  const timeout = setTimeout(() => controller.abort(), 15000)
+function gql<T>(query: string, variables?: Record<string, unknown>): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest()
+    xhr.open("POST", "https://api.stratz.com/graphql")
+    xhr.setRequestHeader("Content-Type", "application/json")
+    xhr.setRequestHeader("Accept", "application/json")
+    xhr.setRequestHeader("Authorization", `Bearer ${TOKEN}`)
+    xhr.responseType = "json"
 
-  try {
-    const res = await fetch("https://api.stratz.com/graphql", {
-      signal: controller.signal,
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-        Authorization: `Bearer ${TOKEN}`,
-      },
-      body: JSON.stringify({ query, variables }),
-    })
-    clearTimeout(timeout)
-    if (!res.ok) {
-      const text = await res.text()
-      throw new Error(`STRATZ error ${res.status}: ${text.substring(0, 200)}`)
+    const timeout = setTimeout(() => {
+      xhr.abort()
+      reject(new Error("STRATZ timeout"))
+    }, 15000)
+
+    xhr.onload = () => {
+      clearTimeout(timeout)
+      const json = xhr.response
+      if (json?.errors && !json?.data) {
+        reject(new Error(json.errors[0]?.message ?? "STRATZ GraphQL error"))
+      } else if (xhr.status >= 200 && xhr.status < 300) {
+        resolve(json.data as T)
+      } else {
+        reject(new Error(`STRATZ error ${xhr.status}: ${(xhr.responseText ?? "").substring(0, 200)}`))
+      }
     }
-    const json = await res.json()
-    if (json.errors && !json.data) {
-      throw new Error(json.errors[0]?.message ?? "STRATZ GraphQL error")
+
+    xhr.onerror = () => {
+      clearTimeout(timeout)
+      reject(new Error("STRATZ network error"))
     }
-    return json.data as T
-  } catch (err) {
-    clearTimeout(timeout)
-    console.error("[gql] fetch error:", err)
-    throw err
-  }
+
+    xhr.send(JSON.stringify({ query, variables }))
+  })
 }
 
 export async function searchPlayers(query: string): Promise<SearchPlayerResult[]> {
