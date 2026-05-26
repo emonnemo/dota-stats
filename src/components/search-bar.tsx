@@ -60,6 +60,12 @@ export function SearchBar() {
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         onFocus={() => results.length > 0 && setOpen(true)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && query.trim().length >= 2) {
+            setOpen(false)
+            router.push(`/search/${encodeURIComponent(query.trim())}`)
+          }
+        }}
       />
       {loading && (
         <div className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
