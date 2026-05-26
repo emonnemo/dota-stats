@@ -1,40 +1,70 @@
 "use client"
 
-import { useEffect, useState, useMemo } from "react"
+import { useEffect, useState, useRef, useCallback } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
 import { searchPlayers } from "@/lib/client-api"
 import type { SearchPlayerResult } from "@/lib/types"
 
-const PAGE_SIZE = 10
+const LOAD_LIMITS = [10, 50, 100]
 
 export default function SearchPage() {
   const params = useParams()
   const router = useRouter()
   const query = decodeURIComponent(String(params.query))
 
-  const [allResults, setAllResults] = useState<SearchPlayerResult[]>([])
+  const [results, setResults] = useState<SearchPlayerResult[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
-  const [page, setPage] = useState(0)
+  const [loadIndex, setLoadIndex] = useState(0)
   const [searchInput, setSearchInput] = useState(query)
+  const sentinelRef = useRef<HTMLDivElement>(null)
+
+  const currentLimit = LOAD_LIMITS[loadIndex]
+  const isFinalLoad = loadIndex >= LOAD_LIMITS.length - 1
+
+  const fetchPage = useCallback(
+    async (limitIndex: number) => {
+      setLoading(true)
+      setError(false)
+      try {
+        const limit = LOAD_LIMITS[limitIndex]
+        const data = await searchPlayers(query, limit)
+        setResults(data)
+        setLoadIndex(limitIndex)
+      } catch {
+        setError(true)
+      } finally {
+        setLoading(false)
+      }
+    },
+    [query],
+  )
 
   useEffect(() => {
-    setLoading(true)
-    setError(false)
-    setPage(0)
-    searchPlayers(query)
-      .then(setAllResults)
-      .catch(() => setError(true))
-      .finally(() => setLoading(false))
-  }, [query])
+    fetchPage(0)
+  }, [fetchPage])
 
-  const totalPages = Math.max(1, Math.ceil(allResults.length / PAGE_SIZE))
-  const pageResults = useMemo(
-    () => allResults.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE),
-    [allResults, page],
-  )
+  const loadMore = useCallback(() => {
+    if (!loading && !isFinalLoad) {
+      fetchPage(loadIndex + 1)
+    }
+  }, [loading, isFinalLoad, fetchPage, loadIndex])
+
+  useEffect(() => {
+    const sentinel = sentinelRef.current
+    if (!sentinel) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) loadMore()
+      },
+      { rootMargin: "200px" },
+    )
+
+    observer.observe(sentinel)
+    return () => observer.disconnect()
+  }, [loadMore])
 
   function handleSearch(e: React.FormEvent) {
     e.preventDefault()
@@ -42,6 +72,8 @@ export default function SearchPage() {
       router.push(`/search/${encodeURIComponent(searchInput.trim())}`)
     }
   }
+
+  const loadedFully = !loading && results.length >= currentLimit && !isFinalLoad
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-8">
@@ -53,28 +85,28 @@ export default function SearchPage() {
         />
       </form>
 
-      {loading && (
+      {loading && results.length === 0 && (
         <p className="text-center text-muted-foreground">Searching...</p>
       )}
 
-      {error && (
+      {error && results.length === 0 && (
         <p className="text-center text-muted-foreground">Search failed. Try again.</p>
       )}
 
-      {!loading && !error && allResults.length === 0 && (
+      {!loading && !error && results.length === 0 && (
         <p className="text-center text-muted-foreground">
           No players found for &ldquo;{query}&rdquo;
         </p>
       )}
 
-      {!loading && !error && allResults.length > 0 && (
+      {results.length > 0 && (
         <>
           <p className="mb-4 text-sm text-muted-foreground">
-            {allResults.length} result{allResults.length !== 1 ? "s" : ""} for
+            {results.length} result{results.length !== 1 ? "s" : ""} for
             &ldquo;{query}&rdquo;
           </p>
           <div className="space-y-2">
-            {pageResults.map((r) => (
+            {results.map((r) => (
               <button
                 key={r.id}
                 className="flex w-full items-center gap-4 rounded-lg border p-4 text-left transition-colors hover:bg-muted/50"
@@ -89,25 +121,23 @@ export default function SearchPage() {
             ))}
           </div>
 
-          <div className="mt-6 flex items-center justify-center gap-4">
-            <Button
-              variant="outline"
-              disabled={page === 0}
-              onClick={() => setPage(page - 1)}
-            >
-              Previous
-            </Button>
-            <span className="text-sm text-muted-foreground">
-              Page {page + 1} of {totalPages}
-            </span>
-            <Button
-              variant="outline"
-              disabled={page >= totalPages - 1}
-              onClick={() => setPage(page + 1)}
-            >
-              Next
-            </Button>
-          </div>
+          <div ref={sentinelRef} className="h-4" />
+
+          {loading && results.length > 0 && (
+            <p className="py-4 text-center text-sm text-muted-foreground">Loading more...</p>
+          )}
+
+          {loadedFully && (
+            <p className="py-4 text-center text-sm text-muted-foreground">
+              Scroll for more results...
+            </p>
+          )}
+
+          {!loading && (isFinalLoad || results.length < currentLimit) && (
+            <p className="py-4 text-center text-sm text-muted-foreground">
+              All results loaded
+            </p>
+          )}
         </>
       )}
     </main>
