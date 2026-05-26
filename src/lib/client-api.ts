@@ -39,16 +39,16 @@ function gql<T>(query: string, variables?: Record<string, unknown>): Promise<T> 
 
 export async function searchPlayers(
   query: string,
-  take: number = 50,
-  skip?: number,
+  take: number = 10,
+  skip: number = 0,
 ): Promise<SearchPlayerResult[]> {
   const data = await gql<{
     stratz: { search: { players: { id: number; name: string; avatar: string; lastMatchDateTime: number }[] } }
   }>(
     `query SearchPlayers($q: String!, $take: Int, $skip: Int) {
       stratz {
-        search(request: { query: $q, take: $take }, skip: $skip) {
-          players {
+        search(request: { query: $q, take: 50 }) {
+          players(skip: $skip, take: $take) {
             id
             name
             avatar
