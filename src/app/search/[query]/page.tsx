@@ -1,13 +1,13 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { searchPlayers } from "@/lib/client-api"
 import type { SearchPlayerResult } from "@/lib/types"
 
-const PAGE_SIZE = 20
+const PAGE_SIZE = 10
 
 export default function SearchPage() {
   const params = useParams()
@@ -21,32 +21,27 @@ export default function SearchPage() {
   const [hasMore, setHasMore] = useState(false)
   const [searchInput, setSearchInput] = useState(query)
 
-  useEffect(() => {
-    setLoading(true)
-    setError(false)
-    setPage(0)
-    searchPlayers(query, { take: PAGE_SIZE + 1, skip: 0 })
-      .then((data) => {
+  const fetchPage = useCallback(
+    async (pageNum: number) => {
+      setLoading(true)
+      setError(false)
+      try {
+        const data = await searchPlayers(query, PAGE_SIZE + 1, pageNum * PAGE_SIZE)
         setHasMore(data.length > PAGE_SIZE)
         setResults(data.slice(0, PAGE_SIZE))
-      })
-      .catch(() => setError(true))
-      .finally(() => setLoading(false))
-  }, [query])
+        setPage(pageNum)
+      } catch {
+        setError(true)
+      } finally {
+        setLoading(false)
+      }
+    },
+    [query],
+  )
 
-  async function goToPage(next: number) {
-    setLoading(true)
-    setPage(next)
-    try {
-      const data = await searchPlayers(query, { take: PAGE_SIZE + 1, skip: next * PAGE_SIZE })
-      setHasMore(data.length > PAGE_SIZE)
-      setResults(data.slice(0, PAGE_SIZE))
-    } catch {
-      setError(true)
-    } finally {
-      setLoading(false)
-    }
-  }
+  useEffect(() => {
+    fetchPage(0)
+  }, [fetchPage])
 
   function handleSearch(e: React.FormEvent) {
     e.preventDefault()
@@ -82,7 +77,7 @@ export default function SearchPage() {
       {!loading && !error && results.length > 0 && (
         <>
           <p className="mb-4 text-sm text-muted-foreground">
-            Results for &ldquo;{query}&rdquo;
+            Results for &ldquo;{query}&rdquo; {page > 0 && `(page ${page + 1})`}
           </p>
           <div className="space-y-2">
             {results.map((r) => (
@@ -104,7 +99,7 @@ export default function SearchPage() {
             <Button
               variant="outline"
               disabled={page === 0}
-              onClick={() => goToPage(page - 1)}
+              onClick={() => fetchPage(page - 1)}
             >
               Previous
             </Button>
@@ -112,7 +107,7 @@ export default function SearchPage() {
             <Button
               variant="outline"
               disabled={!hasMore}
-              onClick={() => goToPage(page + 1)}
+              onClick={() => fetchPage(page + 1)}
             >
               Next
             </Button>
